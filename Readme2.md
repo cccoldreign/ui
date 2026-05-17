@@ -4,10 +4,11 @@
 1. [Архитектура и основные концепции](#архитектура)
 2. [Расширение DatabaseManager](#расширение-databasemanager)
 3. [Система типов данных](#система-типов-данных)
-4. [Автоматическое создание форм](#автоматическое-создание-форм)
-5. [Обработка иностранных ключей](#обработка-иностранных-ключей)
-6. [Отслеживание изменений](#отслеживание-изменений)
-7. [Полные примеры](#полные-примеры)
+4. [Data Структуры таблиц](#data-структуры-таблиц-примеры-python)
+5. [Автоматическое создание форм](#автоматическое-создание-форм)
+6. [Обработка иностранных ключей](#обработка-иностранных-ключей)
+7. [Отслеживание изменений](#отслеживание-изменений)
+8. [Полные примеры](#полные-примеры)
 
 ---
 
@@ -394,6 +395,1040 @@ class TableSchema:
                 for name, field in self.fields.items()
             }
         }
+
+
+---
+
+## Data Структуры таблиц (примеры Python)
+
+### Способ 1: Ручное определение схемы (для small приложений)
+
+```python
+# schemas.py
+
+from field_types import FieldType, FieldDefinition, TableSchema
+
+def create_employees_schema() -> TableSchema:
+    """Создать схему таблицы employees вручную"""
+    schema = TableSchema('employees')
+    
+    # Первичный ключ
+    schema.add_field(FieldDefinition(
+        name='id',
+        field_type=FieldType.INTEGER,
+        display_name='ID сотрудника',
+        nullable=False,
+        primary_key=True,
+        read_only=True
+    ))
+    
+    # Текстовые поля
+    schema.add_field(FieldDefinition(
+        name='name',
+        field_type=FieldType.TEXT,
+        display_name='Имя',
+        nullable=False
+    ))
+    
+    schema.add_field(FieldDefinition(
+        name='surname',
+        field_type=FieldType.TEXT,
+        display_name='Фамилия',
+        nullable=False
+    ))
+    
+    schema.add_field(FieldDefinition(
+        name='email',
+        field_type=FieldType.TEXT,
+        display_name='Email',
+        nullable=True
+    ))
+    
+    # Числовые поля
+    schema.add_field(FieldDefinition(
+        name='salary',
+        field_type=FieldType.DECIMAL,
+        display_name='Зарплата',
+        nullable=False,
+        default_value=0.0
+    ))
+    
+    # Иностранный ключ
+    schema.add_field(FieldDefinition(
+        name='department_id',
+        field_type=FieldType.FOREIGN_KEY,
+        display_name='Подразделение',
+        nullable=False,
+        foreign_key=('departments', 'id', 'name')  # (таблица, id_колонка, display_колонка)
+    ))
+    
+    # Булево поле
+    schema.add_field(FieldDefinition(
+        name='is_active',
+        field_type=FieldType.BOOLEAN,
+        display_name='Активен',
+        nullable=False,
+        default_value=True
+    ))
+    
+    # Дата
+    schema.add_field(FieldDefinition(
+        name='hire_date',
+        field_type=FieldType.DATE,
+        display_name='Дата приёма',
+        nullable=True
+    ))
+    
+    return schema
+
+
+def create_departments_schema() -> TableSchema:
+    """Создать схему таблицы departments"""
+    schema = TableSchema('departments')
+    
+    schema.add_field(FieldDefinition(
+        name='id',
+        field_type=FieldType.INTEGER,
+        display_name='ID',
+        nullable=False,
+        primary_key=True,
+        read_only=True
+    ))
+    
+    schema.add_field(FieldDefinition(
+        name='name',
+        field_type=FieldType.TEXT,
+        display_name='Название подразделения',
+        nullable=False
+    ))
+    
+    schema.add_field(FieldDefinition(
+        name='budget',
+        field_type=FieldType.DECIMAL,
+        display_name='Бюджет',
+        nullable=True
+    ))
+    
+    # Самоссылающийся FK (менеджер отдела)
+    schema.add_field(FieldDefinition(
+        name='manager_id',
+        field_type=FieldType.FOREIGN_KEY,
+        display_name='Менеджер подразделения',
+        nullable=True,
+        foreign_key=('employees', 'id', 'name')
+    ))
+    
+    return schema
+
+
+def create_projects_schema() -> TableSchema:
+    """Создать схему таблицы projects (сложный пример с несколькими FK)"""
+    schema = TableSchema('projects')
+    
+    schema.add_field(FieldDefinition(
+        name='id',
+        field_type=FieldType.INTEGER,
+        display_name='ID проекта',
+        nullable=False,
+        primary_key=True,
+        read_only=True
+    ))
+    
+    schema.add_field(FieldDefinition(
+        name='name',
+        field_type=FieldType.TEXT,
+        display_name='Название проекта',
+        nullable=False
+    ))
+    
+    schema.add_field(FieldDefinition(
+        name='description',
+        field_type=FieldType.TEXT,
+        display_name='Описание',
+        nullable=True
+    ))
+    
+    # FK на менеджера проекта
+    schema.add_field(FieldDefinition(
+        name='manager_id',
+        field_type=FieldType.FOREIGN_KEY,
+        display_name='Менеджер проекта',
+        nullable=False,
+        foreign_key=('employees', 'id', 'name')
+    ))
+    
+    # FK на подразделение
+    schema.add_field(FieldDefinition(
+        name='department_id',
+        field_type=FieldType.FOREIGN_KEY,
+        display_name='Подразделение',
+        nullable=False,
+        foreign_key=('departments', 'id', 'name')
+    ))
+    
+    # Даты
+    schema.add_field(FieldDefinition(
+        name='start_date',
+        field_type=FieldType.DATE,
+        display_name='Дата начала',
+        nullable=False
+    ))
+    
+    schema.add_field(FieldDefinition(
+        name='end_date',
+        field_type=FieldType.DATE,
+        display_name='Дата завершения',
+        nullable=True
+    ))
+    
+    # Бюджет
+    schema.add_field(FieldDefinition(
+        name='budget',
+        field_type=FieldType.DECIMAL,
+        display_name='Бюджет проекта',
+        nullable=False
+    ))
+    
+    # Статус (можно использовать как текст)
+    schema.add_field(FieldDefinition(
+        name='status',
+        field_type=FieldType.TEXT,
+        display_name='Статус',
+        nullable=False,
+        default_value='planning'
+    ))
+    
+    return schema
+```
+
+### Способ 2: Централизованное хранилище схем (для больших приложений)
+
+```python
+# schema_registry.py
+
+from typing import Dict
+from field_types import TableSchema
+from schemas import (
+    create_employees_schema,
+    create_departments_schema,
+    create_projects_schema
+)
+
+class SchemaRegistry:
+    """Реестр всех схем таблиц приложения"""
+    
+    _schemas: Dict[str, TableSchema] = {}
+    
+    @classmethod
+    def register_schema(cls, table_name: str, schema: TableSchema):
+        """Зарегистрировать схему"""
+        cls._schemas[table_name] = schema
+        print(f"[SCHEMA] Зарегистрирована схема: {table_name}")
+    
+    @classmethod
+    def get_schema(cls, table_name: str) -> TableSchema:
+        """Получить схему по имени таблицы"""
+        if table_name not in cls._schemas:
+            raise ValueError(f"Схема для {table_name} не зарегистрирована")
+        return cls._schemas[table_name]
+    
+    @classmethod
+    def get_all_schemas(cls) -> Dict[str, TableSchema]:
+        """Получить все схемы"""
+        return dict(cls._schemas)
+    
+    @classmethod
+    def initialize(cls):
+        """Инициализировать всезарегистрированные схемы"""
+        cls.register_schema('employees', create_employees_schema())
+        cls.register_schema('departments', create_departments_schema())
+        cls.register_schema('projects', create_projects_schema())
+        print(f"[SCHEMA] Инициализировано {len(cls._schemas)} схем")
+
+
+# Использование:
+if __name__ == '__main__':
+    SchemaRegistry.initialize()
+    
+    # Получить схему
+    employees_schema = SchemaRegistry.get_schema('employees')
+    print(employees_schema.to_dict())
+    
+    # Получить все схемы
+    all_schemas = SchemaRegistry.get_all_schemas()
+```
+
+### Способ 3: JSON-конфиг для определения схем
+
+```python
+# schemas_config.json
+
+{
+  "employees": {
+    "table_name": "employees",
+    "fields": {
+      "id": {
+        "type": "INTEGER",
+        "display_name": "ID сотрудника",
+        "nullable": false,
+        "primary_key": true,
+        "read_only": true
+      },
+      "name": {
+        "type": "TEXT",
+        "display_name": "Имя",
+        "nullable": false
+      },
+      "surname": {
+        "type": "TEXT",
+        "display_name": "Фамилия",
+        "nullable": false
+      },
+      "email": {
+        "type": "TEXT",
+        "display_name": "Email",
+        "nullable": true
+      },
+      "salary": {
+        "type": "DECIMAL",
+        "display_name": "Зарплата",
+        "nullable": false,
+        "default_value": 0.0
+      },
+      "department_id": {
+        "type": "FOREIGN_KEY",
+        "display_name": "Подразделение",
+        "nullable": false,
+        "foreign_key": {
+          "table": "departments",
+          "id_column": "id",
+          "display_column": "name"
+        }
+      },
+      "is_active": {
+        "type": "BOOLEAN",
+        "display_name": "Активен",
+        "nullable": false,
+        "default_value": true
+      },
+      "hire_date": {
+        "type": "DATE",
+        "display_name": "Дата приёма",
+        "nullable": true
+      }
+    }
+  },
+  "departments": {
+    "table_name": "departments",
+    "fields": {
+      "id": {
+        "type": "INTEGER",
+        "display_name": "ID",
+        "nullable": false,
+        "primary_key": true,
+        "read_only": true
+      },
+      "name": {
+        "type": "TEXT",
+        "display_name": "Название подразделения",
+        "nullable": false
+      },
+      "budget": {
+        "type": "DECIMAL",
+        "display_name": "Бюджет",
+        "nullable": true
+      },
+      "manager_id": {
+        "type": "FOREIGN_KEY",
+        "display_name": "Менеджер подразделения",
+        "nullable": true,
+        "foreign_key": {
+          "table": "employees",
+          "id_column": "id",
+          "display_column": "name"
+        }
+      }
+    }
+  }
+}
+```
+
+```python
+# schema_loader.py
+
+import json
+from pathlib import Path
+from field_types import FieldType, FieldDefinition, TableSchema
+
+class JSONSchemaLoader:
+    """Загрузчик схем из JSON файла"""
+    
+    @staticmethod
+    def load_schema_from_json(config_path: str, table_name: str) -> TableSchema:
+        """
+        Загрузить схему из JSON файла.
+        
+        Пример:
+            schema = JSONSchemaLoader.load_schema_from_json('schemas_config.json', 'employees')
+        """
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        
+        if table_name not in config:
+            raise ValueError(f"Таблица {table_name} не найдена в конфиге")
+        
+        table_config = config[table_name]
+        schema = TableSchema(table_config['table_name'])
+        
+        for field_name, field_config in table_config['fields'].items():
+            field_type = FieldType[field_config['type']]
+            
+            fk_info = None
+            if 'foreign_key' in field_config and field_config['foreign_key']:
+                fk = field_config['foreign_key']
+                fk_info = (fk['table'], fk['id_column'], fk['display_column'])
+            
+            field = FieldDefinition(
+                name=field_name,
+                field_type=field_type,
+                display_name=field_config.get('display_name', field_name),
+                nullable=field_config.get('nullable', True),
+                primary_key=field_config.get('primary_key', False),
+                foreign_key=fk_info,
+                read_only=field_config.get('read_only', False),
+                default_value=field_config.get('default_value')
+            )
+            schema.add_field(field)
+        
+        return schema
+
+    @staticmethod
+    def load_all_schemas(config_path: str) -> Dict[str, TableSchema]:
+        """Загрузить все схемы из JSON файла"""
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        
+        schemas = {}
+        for table_name in config.keys():
+            schemas[table_name] = JSONSchemaLoader.load_schema_from_json(config_path, table_name)
+        
+        return schemas
+```
+
+### Способ 4: Dataclass подход (современный Python)
+
+```python
+# dataclass_schemas.py
+
+from dataclasses import dataclass, field as dc_field
+from typing import Optional, Tuple, List
+from field_types import FieldType
+
+@dataclass
+class ColumnDef:
+    """Определение колонки"""
+    name: str
+    type: FieldType
+    display_name: Optional[str] = None
+    nullable: bool = True
+    primary_key: bool = False
+    read_only: bool = False
+    default_value: Optional[str] = None
+    foreign_key: Optional[Tuple[str, str, str]] = None  # (table, id_col, display_col)
+    
+    def __post_init__(self):
+        if self.display_name is None:
+            self.display_name = self._humanize_name(self.name)
+    
+    @staticmethod
+    def _humanize_name(snake_case: str) -> str:
+        return ' '.join(word.capitalize() for word in snake_case.split('_'))
+
+
+@dataclass
+class TableDef:
+    """Определение таблицы"""
+    table_name: str
+    columns: List[ColumnDef] = dc_field(default_factory=list)
+    
+    def add_column(self, col: ColumnDef):
+        self.columns.append(col)
+    
+    def to_schema(self) -> 'TableSchema':
+        """Преобразовать в TableSchema"""
+        from field_types import TableSchema, FieldDefinition
+        
+        schema = TableSchema(self.table_name)
+        for col in self.columns:
+            field = FieldDefinition(
+                name=col.name,
+                field_type=col.type,
+                display_name=col.display_name,
+                nullable=col.nullable,
+                primary_key=col.primary_key,
+                foreign_key=col.foreign_key,
+                read_only=col.read_only,
+                default_value=col.default_value
+            )
+            schema.add_field(field)
+        return schema
+
+
+# Использование с dataclass:
+employees_def = TableDef(
+    table_name='employees',
+    columns=[
+        ColumnDef('id', FieldType.INTEGER, primary_key=True, read_only=True),
+        ColumnDef('name', FieldType.TEXT, nullable=False),
+        ColumnDef('surname', FieldType.TEXT, nullable=False),
+        ColumnDef('email', FieldType.TEXT),
+        ColumnDef('salary', FieldType.DECIMAL, nullable=False, default_value='0.0'),
+        ColumnDef(
+            'department_id',
+            FieldType.FOREIGN_KEY,
+            nullable=False,
+            foreign_key=('departments', 'id', 'name')
+        ),
+        ColumnDef('is_active', FieldType.BOOLEAN, default_value='True'),
+        ColumnDef('hire_date', FieldType.DATE),
+    ]
+)
+
+# Преобразовать в TableSchema
+schema = employees_def.to_schema()
+```
+
+### Способ 5: Автоматическое создание из БД
+
+```python
+# auto_schema_from_db.py
+
+from database_manager import DatabaseManager
+from field_types import FieldType, FieldDefinition, TableSchema
+
+class AutoSchemaBuilder:
+    """Автоматическое создание схемы прямо из БД"""
+    
+    @staticmethod
+    def build_from_database(table_name: str, 
+                            field_overrides: dict = None) -> TableSchema:
+        """
+        Автоматически построить схему из БД с возможностью переопределения.
+        
+        Пример:
+            # Базовое создание из БД
+            schema = AutoSchemaBuilder.build_from_database('employees')
+            
+            # С переопределением некоторых полей
+            schema = AutoSchemaBuilder.build_from_database(
+                'employees',
+                field_overrides={
+                    'id': {'read_only': True},
+                    'salary': {'display_name': 'Месячная зарплата'},
+                    'department_id': {
+                        'foreign_key': ('departments', 'id', 'name')
+                    }
+                }
+            )
+        """
+        db = DatabaseManager.instance()
+        schema_info = db.get_table_schema(table_name)
+        schema = TableSchema(table_name)
+        
+        field_overrides = field_overrides or {}
+        
+        for col_info in schema_info['columns']:
+            col_name = col_info['name']
+            override = field_overrides.get(col_name, {})
+            
+            # Определяем тип поля
+            field_type = AutoSchemaBuilder._determine_type(col_info)
+            fk_info = col_info.get('foreign_key')
+            
+            field = FieldDefinition(
+                name=col_name,
+                field_type=field_type,
+                display_name=override.get('display_name') or AutoSchemaBuilder._humanize(col_name),
+                nullable=col_info.get('nullable', True),
+                primary_key=col_info.get('primary_key', False),
+                foreign_key=override.get('foreign_key') or fk_info,
+                read_only=override.get('read_only', col_info.get('primary_key', False)),
+                default_value=override.get('default_value')
+            )
+            
+            schema.add_field(field)
+        
+        return schema
+    
+    @staticmethod
+    def _determine_type(col_info: dict) -> FieldType:
+        """Определить тип поля по информации из БД"""
+        if col_info.get('foreign_key'):
+            return FieldType.FOREIGN_KEY
+        
+        type_str = col_info.get('type', '').upper()
+        
+        if 'INT' in type_str:
+            return FieldType.INTEGER
+        elif 'DECIMAL' in type_str or 'NUMERIC' in type_str or 'FLOAT' in type_str:
+            return FieldType.DECIMAL
+        elif 'BOOL' in type_str:
+            return FieldType.BOOLEAN
+        elif 'DATETIME' in type_str or 'TIMESTAMP' in type_str:
+            return FieldType.DATETIME
+        elif 'DATE' in type_str:
+            return FieldType.DATE
+        else:
+            return FieldType.TEXT
+    
+    @staticmethod
+    def _humanize(snake_case: str) -> str:
+        return ' '.join(word.capitalize() for word in snake_case.split('_'))
+```
+
+### Способ 6: Полный пример с несколькими связанными таблицами
+
+```python
+# complete_schema_example.py
+
+"""
+ПОЛНЫЙ ПРИМЕР СТРУКТУРЫ ДАННЫХ ДЛЯ CRM ПРИЛОЖЕНИЯ
+
+Таблицы:
+- users (пользователи системы)
+- contacts (контакты)
+- companies (компании)
+- deals (сделки)
+- activities (действия/задачи)
+"""
+
+from field_types import FieldType, FieldDefinition, TableSchema
+
+def create_users_schema() -> TableSchema:
+    """Пользователи системы"""
+    schema = TableSchema('users')
+    
+    schema.add_field(FieldDefinition(
+        'id', FieldType.INTEGER, 'ID', 
+        primary_key=True, read_only=True
+    ))
+    schema.add_field(FieldDefinition(
+        'username', FieldType.TEXT, 'Логин',
+        nullable=False
+    ))
+    schema.add_field(FieldDefinition(
+        'email', FieldType.TEXT, 'Email',
+        nullable=False
+    ))
+    schema.add_field(FieldDefinition(
+        'first_name', FieldType.TEXT, 'Имя'
+    ))
+    schema.add_field(FieldDefinition(
+        'last_name', FieldType.TEXT, 'Фамилия'
+    ))
+    schema.add_field(FieldDefinition(
+        'is_active', FieldType.BOOLEAN, 'Активен',
+        default_value=True
+    ))
+    
+    return schema
+
+
+def create_companies_schema() -> TableSchema:
+    """Компании"""
+    schema = TableSchema('companies')
+    
+    schema.add_field(FieldDefinition(
+        'id', FieldType.INTEGER, 'ID',
+        primary_key=True, read_only=True
+    ))
+    schema.add_field(FieldDefinition(
+        'name', FieldType.TEXT, 'Название',
+        nullable=False
+    ))
+    schema.add_field(FieldDefinition(
+        'website', FieldType.TEXT, 'Веб-сайт'
+    ))
+    schema.add_field(FieldDefinition(
+        'phone', FieldType.TEXT, 'Телефон'
+    ))
+    schema.add_field(FieldDefinition(
+        'email', FieldType.TEXT, 'Email компании'
+    ))
+    schema.add_field(FieldDefinition(
+        'industry', FieldType.TEXT, 'Индустрия'
+    ))
+    schema.add_field(FieldDefinition(
+        'employee_count', FieldType.INTEGER, 'Кол-во сотрудников'
+    ))
+    schema.add_field(FieldDefinition(
+        'created_at', FieldType.DATETIME, 'Создано'
+    ))
+    
+    return schema
+
+
+def create_contacts_schema() -> TableSchema:
+    """Контакты (люди в компаниях)"""
+    schema = TableSchema('contacts')
+    
+    schema.add_field(FieldDefinition(
+        'id', FieldType.INTEGER, 'ID',
+        primary_key=True, read_only=True
+    ))
+    schema.add_field(FieldDefinition(
+        'first_name', FieldType.TEXT, 'Имя',
+        nullable=False
+    ))
+    schema.add_field(FieldDefinition(
+        'last_name', FieldType.TEXT, 'Фамилия',
+        nullable=False
+    ))
+    schema.add_field(FieldDefinition(
+        'email', FieldType.TEXT, 'Email'
+    ))
+    schema.add_field(FieldDefinition(
+        'phone', FieldType.TEXT, 'Телефон'
+    ))
+    schema.add_field(FieldDefinition(
+        'position', FieldType.TEXT, 'Должность'
+    ))
+    
+    # FK на компанию
+    schema.add_field(FieldDefinition(
+        'company_id', FieldType.FOREIGN_KEY, 'Компания',
+        nullable=False,
+        foreign_key=('companies', 'id', 'name')
+    ))
+    
+    # FK на ответственного менеджера
+    schema.add_field(FieldDefinition(
+        'assigned_to', FieldType.FOREIGN_KEY, 'Ответственный',
+        foreign_key=('users', 'id', 'username')
+    ))
+    
+    schema.add_field(FieldDefinition(
+        'notes', FieldType.TEXT, 'Заметки'
+    ))
+    schema.add_field(FieldDefinition(
+        'created_at', FieldType.DATETIME, 'Создано'
+    ))
+    
+    return schema
+
+
+def create_deals_schema() -> TableSchema:
+    """Сделки"""
+    schema = TableSchema('deals')
+    
+    schema.add_field(FieldDefinition(
+        'id', FieldType.INTEGER, 'ID',
+        primary_key=True, read_only=True
+    ))
+    schema.add_field(FieldDefinition(
+        'title', FieldType.TEXT, 'Название',
+        nullable=False
+    ))
+    schema.add_field(FieldDefinition(
+        'description', FieldType.TEXT, 'Описание'
+    ))
+    
+    # FK на контакт
+    schema.add_field(FieldDefinition(
+        'contact_id', FieldType.FOREIGN_KEY, 'Контакт',
+        nullable=False,
+        foreign_key=('contacts', 'id', 'first_name')
+    ))
+    
+    # FK на компанию
+    schema.add_field(FieldDefinition(
+        'company_id', FieldType.FOREIGN_KEY, 'Компания',
+        nullable=False,
+        foreign_key=('companies', 'id', 'name')
+    ))
+    
+    # FK на ответственного
+    schema.add_field(FieldDefinition(
+        'owner_id', FieldType.FOREIGN_KEY, 'Владелец сделки',
+        nullable=False,
+        foreign_key=('users', 'id', 'username')
+    ))
+    
+    schema.add_field(FieldDefinition(
+        'amount', FieldType.DECIMAL, 'Сумма'
+    ))
+    schema.add_field(FieldDefinition(
+        'status', FieldType.TEXT, 'Статус',
+        default_value='new'
+    ))
+    schema.add_field(FieldDefinition(
+        'probability', FieldType.INTEGER, 'Вероятность (%)',
+        default_value=0
+    ))
+    schema.add_field(FieldDefinition(
+        'expected_close_date', FieldType.DATE, 'Ожидаемая дата закрытия'
+    ))
+    schema.add_field(FieldDefinition(
+        'created_at', FieldType.DATETIME, 'Создано'
+    ))
+    
+    return schema
+
+
+def create_activities_schema() -> TableSchema:
+    """Активности (задачи, звонки, письма)"""
+    schema = TableSchema('activities')
+    
+    schema.add_field(FieldDefinition(
+        'id', FieldType.INTEGER, 'ID',
+        primary_key=True, read_only=True
+    ))
+    schema.add_field(FieldDefinition(
+        'title', FieldType.TEXT, 'Название',
+        nullable=False
+    ))
+    schema.add_field(FieldDefinition(
+        'description', FieldType.TEXT, 'Описание'
+    ))
+    schema.add_field(FieldDefinition(
+        'type', FieldType.TEXT, 'Тип',  # call, email, task, meeting
+        nullable=False,
+        default_value='task'
+    ))
+    
+    # FK на сделку
+    schema.add_field(FieldDefinition(
+        'deal_id', FieldType.FOREIGN_KEY, 'Сделка',
+        foreign_key=('deals', 'id', 'title')
+    ))
+    
+    # FK на контакт
+    schema.add_field(FieldDefinition(
+        'contact_id', FieldType.FOREIGN_KEY, 'Контакт',
+        foreign_key=('contacts', 'id', 'first_name')
+    ))
+    
+    # FK на создателя
+    schema.add_field(FieldDefinition(
+        'created_by', FieldType.FOREIGN_KEY, 'Создал',
+        nullable=False,
+        foreign_key=('users', 'id', 'username')
+    ))
+    
+    # FK на ответственного
+    schema.add_field(FieldDefinition(
+        'assigned_to', FieldType.FOREIGN_KEY, 'Назначить',
+        foreign_key=('users', 'id', 'username')
+    ))
+    
+    schema.add_field(FieldDefinition(
+        'status', FieldType.TEXT, 'Статус',
+        default_value='todo'  # todo, in_progress, completed, cancelled
+    ))
+    schema.add_field(FieldDefinition(
+        'priority', FieldType.TEXT, 'Приоритет',
+        default_value='normal'  # low, normal, high, urgent
+    ))
+    schema.add_field(FieldDefinition(
+        'due_date', FieldType.DATE, 'Срок выполнения'
+    ))
+    schema.add_field(FieldDefinition(
+        'completed_at', FieldType.DATETIME, 'Завершено'
+    ))
+    schema.add_field(FieldDefinition(
+        'created_at', FieldType.DATETIME, 'Создано'
+    ))
+    
+    return schema
+
+
+# Примеры использования разных способов:
+
+if __name__ == '__main__':
+    # Способ 1: Прямое создание
+    contacts_schema = create_contacts_schema()
+    print("Контакты:", contacts_schema.to_dict())
+    
+    # Способ 2: Реестр схем
+    from schema_registry import SchemaRegistry
+    SchemaRegistry.register_schema('users', create_users_schema())
+    SchemaRegistry.register_schema('companies', create_companies_schema())
+    SchemaRegistry.register_schema('contacts', create_contacts_schema())
+    SchemaRegistry.register_schema('deals', create_deals_schema())
+    SchemaRegistry.register_schema('activities', create_activities_schema())
+    
+    users_schema = SchemaRegistry.get_schema('users')
+    
+    # Способ 3: JSON конфиг (смотри выше)
+    # Способ 4: Dataclass (смотри выше)
+    # Способ 5: Автоматически из БД
+    from auto_schema_from_db import AutoSchemaBuilder
+    auto_schema = AutoSchemaBuilder.build_from_database('contacts')
+```
+
+---
+
+## Сравнение подходов
+
+| Способ | Плюсы | Минусы | Когда использовать |
+|--------|-------|--------|-------------------|
+| **1. Ручной** | Полный контроль, гибкость | Много кода | Небольшие приложения |
+| **2. Реестр** | Централизованное управление | Нужна инициализация | Средние приложения |
+| **3. JSON** | Конфигурация вне кода | Парсинг JSON, отладка | Конфигурируемые системы |
+| **4. Dataclass** | Современный Python, типизация | Python 3.7+ | Новые проекты |
+| **5. Автомат** | Минимум кода, синхронизация с БД | Зависит от БД | Legacy системы |
+| **6. Комплекс** | Реальный пример | Много кода | Production приложения |
+
+---
+
+## Практические рекомендации по выбору подхода
+
+### 📌 Быстрый старт (первый проект)
+```python
+# Используйте Способ 1: Ручное определение
+from schemas import create_employees_schema
+
+schema = create_employees_schema()
+form = AutoFormBuilder(schema).build_form()
+```
+
+### 📌 Растущее приложение (10+ таблиц)
+```python
+# Используйте Способ 2: SchemaRegistry
+from schema_registry import SchemaRegistry
+
+SchemaRegistry.initialize()
+schema = SchemaRegistry.get_schema('employees')
+```
+
+### 📌 Конфигурируемая система (разные БД)
+```python
+# Используйте Способ 3: JSON конфиг
+from schema_loader import JSONSchemaLoader
+
+schema = JSONSchemaLoader.load_schema_from_json('schemas.json', 'employees')
+```
+
+### 📌 Современный код (Python 3.7+)
+```python
+# Используйте Способ 4: Dataclass
+from dataclass_schemas import employees_def
+
+schema = employees_def.to_schema()
+```
+
+### 📌 Legacy система (уже есть БД)
+```python
+# Используйте Способ 5: Автоматизм
+from auto_schema_from_db import AutoSchemaBuilder
+
+schema = AutoSchemaBuilder.build_from_database('employees')
+```
+
+### 📌 Enterprise (множество взаимозависимостей)
+```python
+# Комбинируйте несколько подходов:
+
+# 1. Загрузите из БД автоматически
+auto_schema = AutoSchemaBuilder.build_from_database('employees')
+
+# 2. Переопределите необходимые поля
+schema = AutoSchemaBuilder.build_from_database(
+    'employees',
+    field_overrides={
+        'salary': {'display_name': 'Месячная зарплата (USD)'},
+        'department_id': {'foreign_key': ('departments', 'id', 'name')}
+    }
+)
+
+# 3. Сохраните в JSON для версионирования
+import json
+with open('employee_schema.json', 'w') as f:
+    json.dump(schema.to_dict(), f, indent=2)
+```
+
+---
+
+## Примеры реальных data структур
+
+### Таблица с полным набором типов
+```python
+# Структура с примерами всех типов данных
+schema = TableSchema('full_example')
+
+schema.add_field(FieldDefinition(
+    'id', FieldType.INTEGER, primary_key=True, read_only=True
+))
+schema.add_field(FieldDefinition(
+    'username', FieldType.TEXT, nullable=False
+))
+schema.add_field(FieldDefinition(
+    'age', FieldType.INTEGER, nullable=False
+))
+schema.add_field(FieldDefinition(
+    'salary', FieldType.DECIMAL, nullable=False
+))
+schema.add_field(FieldDefinition(
+    'is_verified', FieldType.BOOLEAN, default_value=False
+))
+schema.add_field(FieldDefinition(
+    'birth_date', FieldType.DATE
+))
+schema.add_field(FieldDefinition(
+    'last_login', FieldType.DATETIME
+))
+schema.add_field(FieldDefinition(
+    'department_id', FieldType.FOREIGN_KEY,
+    foreign_key=('departments', 'id', 'name')
+))
+```
+
+### Таблица с самоссылкой (иерархия)
+```python
+# Структура с самоссылкой (сотрудник → менеджер)
+schema = TableSchema('employees_hierarchy')
+
+schema.add_field(FieldDefinition(
+    'id', FieldType.INTEGER, primary_key=True
+))
+schema.add_field(FieldDefinition(
+    'name', FieldType.TEXT, nullable=False
+))
+schema.add_field(FieldDefinition(
+    'manager_id', FieldType.FOREIGN_KEY,
+    display_name='Менеджер (сотрудник системы)',
+    nullable=True,
+    foreign_key=('employees_hierarchy', 'id', 'name')
+))
+```
+
+### Таблица с множественными FK
+```python
+# Структура с несколькими иностранными ключами (много-к-одному)
+schema = TableSchema('orders')
+
+schema.add_field(FieldDefinition('id', FieldType.INTEGER, primary_key=True))
+schema.add_field(FieldDefinition('order_number', FieldType.TEXT))
+schema.add_field(FieldDefinition(
+    'customer_id', FieldType.FOREIGN_KEY,
+    foreign_key=('customers', 'id', 'name')
+))
+schema.add_field(FieldDefinition(
+    'sales_manager_id', FieldType.FOREIGN_KEY,
+    display_name='Менеджер по продажам',
+    foreign_key=('employees', 'id', 'name')
+))
+schema.add_field(FieldDefinition(
+    'delivery_address_id', FieldType.FOREIGN_KEY,
+    display_name='Адрес доставки',
+    foreign_key=('addresses', 'id', 'address_text')
+))
+schema.add_field(FieldDefinition(
+    'payment_method_id', FieldType.FOREIGN_KEY,
+    display_name='Способ оплаты',
+    foreign_key=('payment_methods', 'id', 'name')
+))
+```
 ```
 
 ### 2. Функция для автоматического создания схемы из БД

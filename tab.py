@@ -47,7 +47,7 @@ from __future__ import annotations
 from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
-from PyQt5.QtCore import QDate, Qt, pyqtSignal
+from PyQt5.QtCore import QDate, QDateTime, Qt, pyqtSignal
 from PyQt5.QtWidgets import (
     QAbstractItemView,
     QComboBox,
@@ -72,18 +72,40 @@ class _DateColumnDelegate(QStyledItemDelegate):
     Делегат редактирования для столбцов типа "дата".
 
     Открывает QDateEdit со всплывающим календарём (calendarPopup=True).
-    Если в ячейке нет значения либо оно не распознано как дата, редактор
-    открывается с текущей датой по умолчанию.
+    Если в ячейке нет значения либо оно совсем не распознано как дата,
+    редактор открывается с текущей датой по умолчанию.
 
-    Формат хранения/отображения даты в ячейке: "yyyy-MM-dd".
+    Значения могут приходить не только в виде чистой даты ("2024-01-01"),
+    но и в виде даты со временем, например из Access/pyodbc:
+    "2024-01-01 14:30:00" или "01.02.2024 9:05". Делегат умеет
+    распознавать оба варианта — время при разборе просто отбрасывается,
+    используется только дата.
+
+    Формат, в котором делегат записывает результат обратно в ячейку
+    после редактирования: "yyyy-MM-dd" (без времени).
     """
 
     DATE_FORMAT = "yyyy-MM-dd"
 
-    #: Дополнительные форматы, которые делегат пытается распознать при
-    #: разборе уже имеющегося в ячейке текста (для совместимости с данными,
-    #: которые могли прийти из Access в ином виде).
-    _PARSE_FORMATS = ("yyyy-MM-dd", "dd.MM.yyyy", "MM/dd/yyyy", "dd-MM-yyyy")
+    #: Форматы для разбора уже имеющегося в ячейке текста. Проверяются по
+    #: очереди; форматы с временем идут первыми, чтобы не терялась
+    #: информация о дате в строках вида "yyyy-MM-dd HH:mm:ss".
+    _DATETIME_PARSE_FORMATS = (
+        "yyyy-MM-dd HH:mm:ss",
+        "yyyy-MM-dd HH:mm",
+        "yyyy-MM-ddTHH:mm:ss",
+        "dd.MM.yyyy HH:mm:ss",
+        "dd.MM.yyyy HH:mm",
+        "MM/dd/yyyy HH:mm:ss",
+        "MM/dd/yyyy hh:mm:ss AP",
+    )
+    _DATE_ONLY_PARSE_FORMATS = (
+        "yyyy-MM-dd",
+        "dd.MM.yyyy",
+        "MM/dd/yyyy",
+        "dd-MM-yyyy",
+        "yyyy/MM/dd",
+    )
 
     def createEditor(self, parent, option, index):  # noqa: N802 (Qt naming)
         editor = QDateEdit(parent)
@@ -100,13 +122,51 @@ class _DateColumnDelegate(QStyledItemDelegate):
         model.setData(index, editor.date().toString(self.DATE_FORMAT), Qt.EditRole)
 
     def _parse_date(self, text: str) -> QDate:
+        """
+        Пытается распознать дату в произвольном текстовом значении ячейки.
+
+        Порядок разбора:
+            1. Пробуем форматы "дата + время" (QDateTime) — если значение
+               содержит время, оно отбрасывается и возвращается только
+               дата.
+            2. Пробуем форматы "только дата" (QDate) на всей строке.
+            3. Если строка содержит пробел или букву "T" (разделитель
+               даты и времени), пробуем распознать только часть до
+               разделителя как дату — на случай нестандартного формата
+               времени, которого нет в списках выше.
+
+        Если ни один вариант не подошёл, возвращается невалидный QDate()
+        — тогда снаружи (setEditorData) редактор откроется с сегодняшней
+        датой по умолчанию, как и раньше.
+        """
         text = str(text).strip()
         if not text:
             return QDate()
-        for fmt in self._PARSE_FORMATS:
+
+        for fmt in self._DATETIME_PARSE_FORMATS:
+            dt = QDateTime.fromString(text, fmt)
+            if dt.isValid():
+                return dt.date()
+
+        for fmt in self._DATE_ONLY_PARSE_FORMATS:
             date = QDate.fromString(text, fmt)
             if date.isValid():
                 return date
+
+        # Запасной вариант: отделяем дату от времени вручную, если в
+        # строке есть характерный разделитель "дата-время".
+        date_part = text
+        for separator in (" ", "T"):
+            if separator in text:
+                date_part = text.split(separator, 1)[0]
+                break
+
+        if date_part != text:
+            for fmt in self._DATE_ONLY_PARSE_FORMATS:
+                date = QDate.fromString(date_part, fmt)
+                if date.isValid():
+                    return date
+
         return QDate()
 
 

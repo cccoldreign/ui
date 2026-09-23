@@ -32,8 +32,26 @@ from typing import Any, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from PyQt5.QtCore import QAbstractTableModel, QModelIndex, Qt, QVariant
-from PyQt5.QtWidgets import QAbstractItemView, QHeaderView, QTableView, QVBoxLayout, QWidget
+from PyQt5.QtCore import QAbstractTableModel, QDateTime, QModelIndex, Qt, QVariant
+from PyQt5.QtWidgets import (
+    QAbstractItemView,
+    QCheckBox,
+    QComboBox,
+    QDateTimeEdit,
+    QDialog,
+    QDialogButtonBox,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QListWidgetItem,
+    QPushButton,
+    QStackedWidget,
+    QTableView,
+    QVBoxLayout,
+    QWidget,
+)
 
 
 # ---------------------------------------------------------------------------

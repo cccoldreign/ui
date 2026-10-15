@@ -1,0 +1,164 @@
+{
+  "database": {
+    "dialect": "sqlite",
+    "path": "example.sqlite"
+  },
+  "active_table": "employees",
+  "tables": [
+    {
+      "name": "employees",
+      "source": {
+        "table": "employees",
+        "alias": "e",
+        "primary_key": "id"
+      },
+      "query": {
+        "mode": "table",
+        "joins": [
+          "LEFT JOIN enterprises ent ON ent.id = e.enterprise_id"
+        ],
+        "order_by": [
+          {
+            "column": "id",
+            "direction": "ASC"
+          }
+        ]
+      },
+      "columns": [
+        {
+          "name": "id",
+          "title": "ID",
+          "field": "e.id",
+          "type": "integer",
+          "visible": true,
+          "editable": false,
+          "filterable": true,
+          "sortable": true,
+          "width": 70
+        },
+        {
+          "name": "last_name",
+          "title": "Фамилия",
+          "field": "e.last_name",
+          "update_field": "last_name",
+          "type": "text",
+          "visible": true,
+          "editable": true,
+          "filterable": true,
+          "sortable": true
+        },
+        {
+          "name": "first_name",
+          "title": "Имя",
+          "field": "e.first_name",
+          "update_field": "first_name",
+          "type": "text",
+          "visible": true,
+          "editable": true,
+          "filterable": true,
+          "sortable": true
+        },
+        {
+          "name": "salary",
+          "title": "Зарплата",
+          "field": "e.salary",
+          "update_field": "salary",
+          "type": "decimal",
+          "visible": true,
+          "editable": true,
+          "filterable": true,
+          "sortable": true,
+          "alignment": "right",
+          "format": "%.2f"
+        },
+        {
+          "name": "enterprise_name",
+          "title": "Предприятие",
+          "field": "ent.name",
+          "type": "text",
+          "visible": true,
+          "editable": false,
+          "filterable": true,
+          "sortable": true
+        }
+      ],
+      "pagination": {
+        "page_size": 200,
+        "cache_pages": 3
+      },
+      "behavior": {
+        "editable": true,
+        "enable_context_menu": true,
+        "resize_columns_to_contents": false
+      }
+    },
+    {
+      "name": "enterprise_directory",
+      "source": {},
+      "query": {
+        "mode": "select",
+        "sql": "SELECT e.id, e.last_name, e.first_name, ent.name AS enterprise_name FROM employees e LEFT JOIN enterprises ent ON ent.id = e.enterprise_id WHERE e.active = ?",
+        "params": [
+          true
+        ],
+        "order_by": [
+          {
+            "column": "last_name",
+            "direction": "ASC"
+          },
+          {
+            "column": "first_name",
+            "direction": "ASC"
+          }
+        ]
+      },
+      "columns": [
+        {
+          "name": "id",
+          "title": "ID",
+          "type": "integer",
+          "visible": true,
+          "editable": false,
+          "filterable": true,
+          "sortable": true
+        },
+        {
+          "name": "last_name",
+          "title": "Фамилия",
+          "type": "text",
+          "visible": true,
+          "editable": false,
+          "filterable": true,
+          "sortable": true
+        },
+        {
+          "name": "first_name",
+          "title": "Имя",
+          "type": "text",
+          "visible": true,
+          "editable": false,
+          "filterable": true,
+          "sortable": true
+        },
+        {
+          "name": "enterprise_name",
+          "title": "Предприятие",
+          "type": "text",
+          "visible": true,
+          "editable": false,
+          "filterable": true,
+          "sortable": true
+        }
+      ],
+      "pagination": {
+        "page_size": 100,
+        "cache_pages": 2
+      },
+      "behavior": {
+        "editable": false,
+        "enable_context_menu": true,
+        "resize_columns_to_contents": false
+      }
+    }
+  ]
+}

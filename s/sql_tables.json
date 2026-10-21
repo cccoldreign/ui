@@ -1,0 +1,20 @@
+{
+  "employees": {
+    "select": "id, name, department, salary",
+    "from": "employees",
+    "join": "",
+    "where": "",
+    "group_by": "",
+    "having": "",
+    "order_by": "id ASC"
+  },
+  "department_summary": {
+    "select": "department, COUNT(*) AS total",
+    "from": "employees",
+    "group_by": "department",
+    "order_by": "total DESC"
+  },
+  "employee_report": {
+    "query": "SELECT e.id, e.name, d.title AS department FROM employees e LEFT JOIN departments d ON d.id = e.department_id ORDER BY e.id"
+  }
+}
